@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <div align="center">
 
 # 🎬 AniTime
@@ -226,3 +227,6 @@ If you found this project helpful, please consider giving it a ⭐!
 [Report Bug](https://github.com/yourusername/anitime/issues) • [Request Feature](https://github.com/yourusername/anitime/issues)
 
 </div>
+=======
+# anitime
+>>>>>>> dd168cc7c94b24410fe57d1b230f5c90a0ab1882
