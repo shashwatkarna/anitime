@@ -6,8 +6,8 @@
 
 A beautiful, modern mobile app that helps anime fans calculate watch time and plan their viewing schedule efficiently.
 
-[![Stars](https://img.shields.io/github/stars/yourusername/anitime?style=social)](https://github.com/yourusername/anitime/stargazers)
-[![Forks](https://img.shields.io/github/forks/yourusername/anitime?style=social)](https://github.com/yourusername/anitime/network/members)
+[![Stars](https://img.shields.io/github/stars/shashwatkarna/anitime?style=social)](https://github.com/shashwatkarna/anitime/stargazers)
+[![Forks](https://img.shields.io/github/forks/shashwatkarna/anitime?style=social)](https://github.com/shashwatkarna/anitime/network/members)
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
 [Features](#-features) • [Tech Stack](#-tech-stack) • [Getting Started](#-getting-started) • [Contributing](#-contributing)
@@ -64,7 +64,7 @@ Make sure you have the following installed:
 1. **Fork & Clone the repository**
    ```bash
    # Fork this repo on GitHub first, then clone your fork
-   git clone https://github.com/YOUR_USERNAME/anitime.git
+   git clone https://github.com/shashwatkarna/anitime.git
    cd anitime
    ```
 
@@ -223,6 +223,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 If you found this project helpful, please consider giving it a ⭐!
 
-[Report Bug](https://github.com/yourusername/anitime/issues) • [Request Feature](https://github.com/yourusername/anitime/issues)
+[Report Bug](https://github.com/shashwatkarna/anitime/issues) • [Request Feature](https://github.com/shashwatkarna/anitime/issues)
 
 </div>
