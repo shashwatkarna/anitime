@@ -72,8 +72,8 @@ async def calculate_watch_time(request: CalculateRequest):
         except ValueError:
             raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
             
-        if target <= today:
-             raise HTTPException(status_code=400, detail="Target date must be in the future")
+        if target < today:
+             raise HTTPException(status_code=400, detail="Target date must be in the future or today")
         
         days_available = (target - today).days
         if days_available == 0: 

@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert, Image, View, Dimensions, Text, Button } from 'react-native';
+import { useState, useEffect, createElement } from 'react';
+import { StyleSheet, TextInput, ScrollView, TouchableOpacity, Alert, Image, View, Dimensions, Text, Button, Platform } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { calculateWatchTime } from '@/api/client';
 import { useMutation } from '@tanstack/react-query';
@@ -7,7 +7,7 @@ import DateTimePicker from '@react-native-community/datetimepicker';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/theme';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useSharedValue, useAnimatedStyle, withRepeat, withTiming, withSequence, interpolate, ZoomIn, Layout, Easing, withDelay, FadeInUp } from 'react-native-reanimated';
 
 const { width } = Dimensions.get('window');
 
@@ -15,6 +15,42 @@ export default function DetailsScreen() {
     const { anime } = useLocalSearchParams();
     const router = useRouter();
     const animeData = anime ? JSON.parse(Array.isArray(anime) ? anime[0] : anime) : null;
+
+    // Breath/Shimmer Shared Values
+    const breathe = useSharedValue(0);
+    const shimmer = useSharedValue(-1);
+
+    useEffect(() => {
+        // Subtle Breathing Loop (Classy/Premium)
+        breathe.value = withRepeat(
+            withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.quad) }),
+            -1,
+            true
+        );
+
+        // Occasional Shimmer Sweep (Classy/Premium)
+        shimmer.value = withRepeat(
+            withSequence(
+                withTiming(1, { duration: 2500, easing: Easing.linear }),
+                withDelay(5000, withTiming(-1, { duration: 0 }))
+            ),
+            -1,
+            false
+        );
+    }, []);
+
+    const breatheStyle = useAnimatedStyle(() => ({
+        shadowOpacity: interpolate(breathe.value, [0, 1], [0.2, 0.4]),
+        borderOpacity: interpolate(breathe.value, [0, 1], [0.3, 0.6]),
+        borderColor: `rgba(108, 99, 255, ${interpolate(breathe.value, [0, 1], [0.2, 0.5])})`,
+    }));
+
+    const shimmerStyle = useAnimatedStyle(() => ({
+        transform: [
+            { translateX: interpolate(shimmer.value, [-1, 1], [-width, width]) },
+            { skewX: '-20deg' }
+        ],
+    }));
 
     const [inputVal, setInputVal] = useState('');
     const [targetDate, setTargetDate] = useState(new Date());
@@ -74,9 +110,9 @@ export default function DetailsScreen() {
                             <Text style={styles.title}>{animeData.title}</Text>
 
                             {/* HERO STAT: Total Time */}
-                            <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.heroStatContainer}>
+                            <Animated.View style={[styles.heroStatContainer, breatheStyle]}>
                                 <LinearGradient
-                                    colors={['rgba(108, 99, 255, 0.2)', 'rgba(108, 99, 255, 0.05)']}
+                                    colors={['rgba(108, 99, 255, 0.4)', 'rgba(108, 99, 255, 0.1)']}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
                                     style={styles.heroStatGradient}
@@ -96,6 +132,7 @@ export default function DetailsScreen() {
 
                             {/* Calculator Section */}
                             <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.calculatorCard}>
+                                <Animated.View style={[StyleSheet.absoluteFill, shimmerStyle, { backgroundColor: 'rgba(255,255,255,0.05)', width: 100, zIndex: 1 }]} />
                                 <Text style={styles.calcTitle}>Plan Your Watch 📅</Text>
                                 <View style={styles.modeRow}>
                                     <TouchableOpacity onPress={() => setMode('daily_eps')} style={[styles.modeBtn, mode === 'daily_eps' && styles.activeMode]}>
@@ -124,6 +161,26 @@ export default function DetailsScreen() {
                                             placeholder={mode === 'daily_eps' ? "e.g. 3" : "e.g. 45"}
                                             placeholderTextColor="#666"
                                         />
+                                    ) : Platform.OS === 'web' ? (
+                                        <View style={styles.dateBtn}>
+                                            {createElement('input', {
+                                                type: 'date',
+                                                value: targetDate.toISOString().split('T')[0],
+                                                onChange: (e: any) => setTargetDate(new Date(e.target.valueAsDate || e.target.value)),
+                                                style: {
+                                                    height: '100%',
+                                                    width: '100%',
+                                                    fontSize: 16,
+                                                    padding: 10,
+                                                    borderRadius: 12,
+                                                    backgroundColor: 'transparent',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    outline: 'none',
+                                                    cursor: 'pointer'
+                                                }
+                                            })}
+                                        </View>
                                     ) : (
                                         <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateBtn}>
                                             <Text style={styles.dateText}>{targetDate.toLocaleDateString()}</Text>
@@ -132,7 +189,7 @@ export default function DetailsScreen() {
                                     )}
                                 </View>
 
-                                {showDatePicker && (
+                                {Platform.OS !== 'web' && showDatePicker && (
                                     <DateTimePicker value={targetDate} mode="date" onChange={(e, d) => { setShowDatePicker(false); if (d) setTargetDate(d); }} />
                                 )}
 
@@ -141,13 +198,39 @@ export default function DetailsScreen() {
                                 </TouchableOpacity>
 
                                 {result && (
-                                    <Animated.View entering={FadeInDown} style={styles.resultBox}>
-                                        <Text style={styles.resultLabel}>Estimated Time</Text>
-                                        <Text style={styles.resultDays}>{result.days_required} Days</Text>
-                                        <Text style={styles.resultDateSmall}>Finish by: {result.finish_date.split('-').reverse().join('-')}</Text>
-                                        <View style={styles.resultStats}>
-                                            <Text style={styles.statText}>{result.total_hours} Hours Total</Text>
-                                        </View>
+                                    <Animated.View
+                                        entering={FadeInUp.duration(1000).easing(Easing.out(Easing.cubic))}
+                                        layout={Layout.springify()}
+                                        style={styles.resultBox}
+                                    >
+                                        <LinearGradient
+                                            colors={['rgba(108, 99, 255, 0.25)', 'rgba(108, 99, 255, 0.05)']}
+                                            style={styles.resultGradient}
+                                        >
+                                            <Text style={styles.resultLabel}>
+                                                {mode === 'target' ? "Daily Pace Required" : "Estimated Time"}
+                                            </Text>
+
+                                            {mode === 'target' ? (
+                                                <>
+                                                    <Text style={styles.resultDays}>{Math.ceil(result.episodes_per_day || 0)} Eps / Day</Text>
+                                                    <Text style={styles.resultDateSmall}>
+                                                        ≈ {Math.ceil((result.episodes_per_day || 0) * (animeData.duration ? parseInt(animeData.duration) : 24))} Mins / Day
+                                                    </Text>
+                                                    <View style={styles.resultStats}>
+                                                        <Text style={styles.statText}>Finish by {result.finish_date?.split('-').reverse().join('-') || ''}</Text>
+                                                    </View>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Text style={styles.resultDays}>{result.days_required} Days</Text>
+                                                    <Text style={styles.resultDateSmall}>Finish by: {result.finish_date?.split('-').reverse().join('-')}</Text>
+                                                    <View style={styles.resultStats}>
+                                                        <Text style={styles.statText}>{result.total_hours} Hours Total</Text>
+                                                    </View>
+                                                </>
+                                            )}
+                                        </LinearGradient>
                                     </Animated.View>
                                 )}
                             </Animated.View>
@@ -158,9 +241,13 @@ export default function DetailsScreen() {
                             <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.genreRow}>
                                 {animeData.genres && animeData.genres.length > 0 ? (
                                     animeData.genres.map((g: any, i: number) => (
-                                        <View key={i} style={styles.genreTag}>
+                                        <LinearGradient
+                                            key={i}
+                                            colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)']}
+                                            style={styles.genreTag}
+                                        >
                                             <Text style={styles.genreText}>{g.name}</Text>
-                                        </View>
+                                        </LinearGradient>
                                     ))
                                 ) : (
                                     <View style={styles.genreTag}>
@@ -205,9 +292,9 @@ export default function DetailsScreen() {
                             <Text style={styles.title}>{animeData.title}</Text>
 
                             {/* HERO STAT: Total Time */}
-                            <Animated.View entering={FadeInDown.delay(100).springify()} style={styles.heroStatContainer}>
+                            <Animated.View style={[styles.heroStatContainer, breatheStyle]}>
                                 <LinearGradient
-                                    colors={['rgba(108, 99, 255, 0.2)', 'rgba(108, 99, 255, 0.05)']}
+                                    colors={['rgba(108, 99, 255, 0.4)', 'rgba(108, 99, 255, 0.1)']}
                                     start={{ x: 0, y: 0 }}
                                     end={{ x: 1, y: 1 }}
                                     style={styles.heroStatGradient}
@@ -227,6 +314,7 @@ export default function DetailsScreen() {
 
                             {/* Calculator Section */}
                             <Animated.View entering={FadeInDown.delay(200).springify()} style={styles.calculatorCard}>
+                                <Animated.View style={[StyleSheet.absoluteFill, shimmerStyle, { backgroundColor: 'rgba(255,255,255,0.05)', width: 100, zIndex: 1 }]} />
                                 <Text style={styles.calcTitle}>Plan Your Watch 📅</Text>
                                 <View style={styles.modeRow}>
                                     <TouchableOpacity onPress={() => setMode('daily_eps')} style={[styles.modeBtn, mode === 'daily_eps' && styles.activeMode]}>
@@ -255,6 +343,26 @@ export default function DetailsScreen() {
                                             placeholder={mode === 'daily_eps' ? "e.g. 3" : "e.g. 45"}
                                             placeholderTextColor="#666"
                                         />
+                                    ) : Platform.OS === 'web' ? (
+                                        <View style={styles.dateBtn}>
+                                            {createElement('input', {
+                                                type: 'date',
+                                                value: targetDate.toISOString().split('T')[0],
+                                                onChange: (e: any) => setTargetDate(new Date(e.target.valueAsDate || e.target.value)),
+                                                style: {
+                                                    height: '100%',
+                                                    width: '100%',
+                                                    fontSize: 16,
+                                                    padding: 10,
+                                                    borderRadius: 12,
+                                                    backgroundColor: 'transparent',
+                                                    color: '#fff',
+                                                    border: 'none',
+                                                    outline: 'none',
+                                                    cursor: 'pointer'
+                                                }
+                                            })}
+                                        </View>
                                     ) : (
                                         <TouchableOpacity onPress={() => setShowDatePicker(true)} style={styles.dateBtn}>
                                             <Text style={styles.dateText}>{targetDate.toLocaleDateString()}</Text>
@@ -263,7 +371,7 @@ export default function DetailsScreen() {
                                     )}
                                 </View>
 
-                                {showDatePicker && (
+                                {Platform.OS !== 'web' && showDatePicker && (
                                     <DateTimePicker value={targetDate} mode="date" onChange={(e, d) => { setShowDatePicker(false); if (d) setTargetDate(d); }} />
                                 )}
 
@@ -272,13 +380,39 @@ export default function DetailsScreen() {
                                 </TouchableOpacity>
 
                                 {result && (
-                                    <Animated.View entering={FadeInDown} style={styles.resultBox}>
-                                        <Text style={styles.resultLabel}>Estimated Time</Text>
-                                        <Text style={styles.resultDays}>{result.days_required} Days</Text>
-                                        <Text style={styles.resultDateSmall}>Finish by: {result.finish_date.split('-').reverse().join('-')}</Text>
-                                        <View style={styles.resultStats}>
-                                            <Text style={styles.statText}>{result.total_hours} Hours Total</Text>
-                                        </View>
+                                    <Animated.View
+                                        entering={FadeInUp.duration(1000).easing(Easing.out(Easing.cubic))}
+                                        layout={Layout.springify()}
+                                        style={styles.resultBox}
+                                    >
+                                        <LinearGradient
+                                            colors={['rgba(108, 99, 255, 0.25)', 'rgba(108, 99, 255, 0.05)']}
+                                            style={styles.resultGradient}
+                                        >
+                                            <Text style={styles.resultLabel}>
+                                                {mode === 'target' ? "Daily Pace Required" : "Estimated Time"}
+                                            </Text>
+
+                                            {mode === 'target' ? (
+                                                <>
+                                                    <Text style={styles.resultDays}>{Math.ceil(result.episodes_per_day || 0)} Eps / Day</Text>
+                                                    <Text style={styles.resultDateSmall}>
+                                                        ≈ {Math.ceil((result.episodes_per_day || 0) * (animeData.duration ? parseInt(animeData.duration) : 24))} Mins / Day
+                                                    </Text>
+                                                    <View style={styles.resultStats}>
+                                                        <Text style={styles.statText}>Finish by {result.finish_date?.split('-').reverse().join('-') || ''}</Text>
+                                                    </View>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <Text style={styles.resultDays}>{result.days_required} Days</Text>
+                                                    <Text style={styles.resultDateSmall}>Finish by: {result.finish_date?.split('-').reverse().join('-')}</Text>
+                                                    <View style={styles.resultStats}>
+                                                        <Text style={styles.statText}>{result.total_hours} Hours Total</Text>
+                                                    </View>
+                                                </>
+                                            )}
+                                        </LinearGradient>
                                     </Animated.View>
                                 )}
                             </Animated.View>
@@ -289,9 +423,13 @@ export default function DetailsScreen() {
                             <Animated.View entering={FadeInDown.delay(300).springify()} style={styles.genreRow}>
                                 {animeData.genres && animeData.genres.length > 0 ? (
                                     animeData.genres.map((g: any, i: number) => (
-                                        <View key={i} style={styles.genreTag}>
+                                        <LinearGradient
+                                            key={i}
+                                            colors={['rgba(255,255,255,0.15)', 'rgba(255,255,255,0.05)']}
+                                            style={styles.genreTag}
+                                        >
                                             <Text style={styles.genreText}>{g.name}</Text>
-                                        </View>
+                                        </LinearGradient>
                                     ))
                                 ) : (
                                     <View style={styles.genreTag}>
@@ -461,18 +599,18 @@ const styles = StyleSheet.create({
     divider: { height: 1, backgroundColor: '#222', marginVertical: 20 },
     calcTitle: { fontSize: 16, fontWeight: 'bold', color: '#fff', marginBottom: 15, textTransform: 'uppercase', letterSpacing: 1 },
     calculatorCard: {
-        backgroundColor: '#1a1a1a',
-        borderRadius: 20,
-        padding: 20,
+        backgroundColor: 'rgba(26, 26, 26, 0.8)',
+        borderRadius: 24,
+        padding: 24,
         borderWidth: 1,
-        borderColor: 'rgba(108, 99, 255, 0.2)',
+        borderColor: 'rgba(108, 99, 255, 0.3)',
         marginTop: 0,
-        marginBottom: 20,
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 4 },
-        shadowOpacity: 0.3,
-        shadowRadius: 8,
-        elevation: 5,
+        marginBottom: 24,
+        shadowColor: Colors.dark.primary,
+        shadowOffset: { width: 0, height: 10 },
+        shadowOpacity: 0.2,
+        shadowRadius: 20,
+        elevation: 10,
     },
     modeRow: { flexDirection: 'row', marginBottom: 20, justifyContent: 'space-between', backgroundColor: '#222', borderRadius: 12, padding: 4 },
     modeBtn: {
@@ -520,13 +658,17 @@ const styles = StyleSheet.create({
     },
     calculateBtnText: { color: '#fff', fontWeight: 'bold', fontSize: 16 },
     resultBox: {
-        marginTop: 20,
-        padding: 20,
-        backgroundColor: 'rgba(108, 99, 255, 0.1)',
-        borderRadius: 16,
-        alignItems: 'center',
+        marginTop: 24,
+        borderRadius: 20,
+        overflow: 'hidden',
         borderWidth: 1,
-        borderColor: 'rgba(108, 99, 255, 0.2)',
+        borderColor: 'rgba(108, 99, 255, 0.4)',
+        backgroundColor: 'rgba(108, 99, 255, 0.05)',
+    },
+    resultGradient: {
+        padding: 24,
+        width: '100%',
+        alignItems: 'center',
     },
     resultLabel: { color: Colors.dark.primary, fontSize: 13, fontWeight: 'bold', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 },
     resultDays: { fontSize: 42, fontWeight: 'bold', color: '#fff', marginBottom: 4, textShadowColor: 'rgba(108, 99, 255, 0.5)', textShadowRadius: 10 },
