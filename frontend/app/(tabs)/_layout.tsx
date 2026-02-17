@@ -5,10 +5,8 @@ import { Platform, View } from 'react-native';
 import { HapticTab } from '@/components/haptic-tab';
 import { IconSymbol } from '@/components/ui/icon-symbol';
 import { Colors } from '@/constants/theme';
-import { useColorScheme } from '@/hooks/use-color-scheme';
 
 export default function TabLayout() {
-  const colorScheme = useColorScheme();
   const activeColor = Colors.dark.primary;
   const inactiveColor = '#666';
 
@@ -53,17 +51,6 @@ export default function TabLayout() {
           tabBarIcon: ({ color, focused }) => (
             <View style={{ alignItems: 'center', justifyContent: 'center', top: Platform.OS === 'ios' ? 10 : 0 }}>
               <IconSymbol size={28} name={focused ? "house.fill" : "house"} color={color} />
-            </View>
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="explore"
-        options={{
-          title: 'Explore',
-          tabBarIcon: ({ color, focused }) => (
-            <View style={{ alignItems: 'center', justifyContent: 'center', top: Platform.OS === 'ios' ? 10 : 0 }}>
-              <IconSymbol size={28} name={focused ? "paperplane.fill" : "paperplane"} color={color} />
             </View>
           ),
         }}
