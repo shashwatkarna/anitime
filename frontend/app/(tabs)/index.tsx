@@ -1,4 +1,5 @@
-import { Image, StyleSheet, FlatList, TouchableOpacity, View, Dimensions, ActivityIndicator, Text, ScrollView } from 'react-native';
+import { useState, useEffect, createElement } from 'react';
+import { Image, StyleSheet, FlatList, TouchableOpacity, View, ActivityIndicator, Text, ScrollView, useWindowDimensions } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { getPopularAnime } from '@/api/client';
@@ -6,35 +7,58 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/theme';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, FadeInUp, useSharedValue, useAnimatedStyle, withRepeat, withTiming, interpolate, Easing, Layout } from 'react-native-reanimated';
 
-const { width } = Dimensions.get('window');
-const CARD_WIDTH = width * 0.4;
-const SPACING = 15;
+const SPACING = 16;
+const MAX_ITEM_WIDTH = 200;
 
 export default function HomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { width } = useWindowDimensions();
+
+  // Responsive Grid Logic
+  const numColumns = Math.max(2, Math.floor(width / MAX_ITEM_WIDTH));
+  const CARD_WIDTH = (width - (numColumns + 1) * SPACING) / numColumns;
+  const TRENDING_CARD_WIDTH = Math.min(width * 0.45, 200);
+
+  // Breathing Animation for Trending List
+  const breathe = useSharedValue(0);
+  useEffect(() => {
+    breathe.value = withRepeat(
+      withTiming(1, { duration: 3000, easing: Easing.inOut(Easing.quad) }),
+      -1,
+      true
+    );
+  }, []);
+
+  const breatheStyle = useAnimatedStyle(() => ({
+    shadowOpacity: interpolate(breathe.value, [0, 1], [0.1, 0.3]),
+    transform: [{ scale: interpolate(breathe.value, [0, 1], [1, 1.02]) }]
+  }));
 
   const { data: trendingData, isLoading: isLoadingTrending } = useQuery({
     queryKey: ['trendingAnime'],
-    queryFn: () => getPopularAnime(10, 'airing'),
+    queryFn: () => (getPopularAnime as any)(10, 'airing'),
   });
 
   const { data: popularData, isLoading: isLoadingPopular } = useQuery({
     queryKey: ['popularAnime'],
-    queryFn: () => getPopularAnime(20, 'bypopularity'),
+    queryFn: () => (getPopularAnime as any)(20, 'bypopularity'),
   });
 
   const trendingAnime = trendingData?.data || [];
   const gridAnime = popularData?.data || [];
   const isLoading = isLoadingTrending || isLoadingPopular;
 
-  const renderTrendingItem = ({ item, index }) => (
-    <Animated.View entering={FadeInDown.delay(index * 100).springify()}>
+  const renderTrendingItem = ({ item, index }: { item: any, index: number }) => (
+    <Animated.View
+      entering={FadeInDown.delay(index * 100).springify()}
+      style={[styles.trendingCard, breatheStyle, { width: TRENDING_CARD_WIDTH }]}
+    >
       <TouchableOpacity
         activeOpacity={0.8}
-        style={styles.trendingCard}
+        style={StyleSheet.absoluteFill}
         onPress={() => router.push({ pathname: '/details', params: { anime: JSON.stringify(item) } })}
       >
         <Image source={{ uri: item.images?.jpg?.large_image_url }} style={styles.trendingImage} />
@@ -49,10 +73,10 @@ export default function HomeScreen() {
     </Animated.View>
   );
 
-  const renderGridItem = ({ item, index }) => (
+  const renderGridItem = ({ item, index }: { item: any, index: number }) => (
     <Animated.View
-      entering={FadeInDown.delay(index * 50 + 500).springify()}
-      style={styles.gridCardContainer}
+      entering={FadeInUp.delay(index * 50).duration(800).easing(Easing.out(Easing.cubic))}
+      style={[styles.gridCardContainer, { width: CARD_WIDTH }]}
     >
       <TouchableOpacity
         activeOpacity={0.8}
@@ -61,11 +85,15 @@ export default function HomeScreen() {
       >
         <Image source={{ uri: item.images?.jpg?.large_image_url }} style={styles.gridImage} />
         <LinearGradient
-          colors={['transparent', 'rgba(0,0,0,0.9)']}
+          colors={['transparent', 'rgba(108, 99, 255, 0.4)', '#0f0f0f']}
+          locations={[0, 0.6, 1]}
           style={styles.cardGradient}
         >
           <Text style={styles.cardTitle} numberOfLines={1}>{item.title}</Text>
-          <Text style={styles.cardSubtitle}>{item.score || '?'} ★</Text>
+          <View style={styles.cardMetaRow}>
+            <Text style={styles.cardSubtitle}>{item.score || '?'} ★</Text>
+            <Text style={styles.cardSubtitle}>• {item.type || 'TV'}</Text>
+          </View>
         </LinearGradient>
       </TouchableOpacity>
     </Animated.View>
@@ -77,13 +105,19 @@ export default function HomeScreen() {
       <View style={styles.header}>
         <View>
           <Text style={styles.greeting}>AniTime</Text>
-          <Text style={styles.appSubtitle}>Discover Anime</Text>
+          <Text style={styles.appSubtitle}>Your premium anime companion</Text>
         </View>
         <TouchableOpacity
           style={styles.searchBtn}
           onPress={() => router.push('/search')}
+          activeOpacity={0.7}
         >
-          <Ionicons name="search" size={24} color="#fff" />
+          <LinearGradient
+            colors={[Colors.dark.primary, 'rgba(108, 99, 255, 0.6)']}
+            style={styles.searchGradient}
+          >
+            <Ionicons name="search" size={22} color="#fff" />
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -93,10 +127,11 @@ export default function HomeScreen() {
         </View>
       ) : (
         <FlatList
+          key={`grid-${numColumns}`}
           data={gridAnime}
           renderItem={renderGridItem}
           keyExtractor={(item) => item.mal_id.toString()}
-          numColumns={2}
+          numColumns={numColumns}
           columnWrapperStyle={styles.row}
           contentContainerStyle={styles.list}
           showsVerticalScrollIndicator={false}
@@ -110,10 +145,10 @@ export default function HomeScreen() {
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.horizontalList}
-                snapToInterval={CARD_WIDTH + SPACING}
+                snapToInterval={TRENDING_CARD_WIDTH + SPACING}
                 decelerationRate="fast"
               />
-              <Text style={[styles.sectionTitle, { marginTop: 20 }]}>All Anime</Text>
+              <Text style={[styles.sectionTitle, { marginTop: 30 }]}>Popular Anime</Text>
             </View>
           }
         />
@@ -144,9 +179,19 @@ const styles = StyleSheet.create({
     fontSize: 14,
   },
   searchBtn: {
-    padding: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
     borderRadius: 50,
+    overflow: 'hidden',
+    shadowColor: Colors.dark.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 5,
+  },
+  searchGradient: {
+    padding: 12,
+    borderRadius: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   center: {
     flex: 1,
@@ -157,14 +202,15 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   sectionContainer: {
-    marginBottom: 10,
+    marginBottom: 20,
   },
   sectionTitle: {
     color: '#fff',
-    fontSize: 20,
-    fontWeight: 'bold',
+    fontSize: 22,
+    fontWeight: '900',
     marginLeft: 20,
-    marginBottom: 15,
+    marginBottom: 20,
+    letterSpacing: 0.5,
   },
   horizontalList: {
     paddingHorizontal: 20,
@@ -172,12 +218,17 @@ const styles = StyleSheet.create({
   },
   // Trending Styles
   trendingCard: {
-    width: CARD_WIDTH,
-    height: 220,
-    borderRadius: 16,
+    height: 280,
+    borderRadius: 24,
     overflow: 'hidden',
     backgroundColor: '#1a1a1a',
     marginRight: SPACING,
+    borderWidth: 1,
+    borderColor: 'rgba(108, 99, 255, 0.2)',
+    shadowColor: Colors.dark.primary,
+    shadowOffset: { width: 0, height: 8 },
+    shadowRadius: 15,
+    elevation: 10,
   },
   trendingImage: {
     width: '100%',
@@ -186,25 +237,28 @@ const styles = StyleSheet.create({
   },
   trendingRank: {
     color: Colors.dark.primary,
-    fontWeight: 'bold',
-    fontSize: 12,
-    marginBottom: 2,
+    fontWeight: '900',
+    fontSize: 14,
+    marginBottom: 4,
+    textTransform: 'uppercase',
   },
   // Grid Styles
   row: {
-    justifyContent: 'space-between',
-    paddingHorizontal: 15,
-    marginBottom: 15,
+    paddingHorizontal: SPACING,
+    gap: SPACING,
+    marginBottom: SPACING,
   },
   gridCardContainer: {
-    width: (width - 45) / 2,
+    // Width handled dynamically
   },
   gridCard: {
     width: '100%',
-    height: 260,
-    borderRadius: 16,
+    height: 300,
+    borderRadius: 20,
     overflow: 'hidden',
     backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.05)',
   },
   gridImage: {
     width: '100%',
@@ -216,17 +270,23 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    padding: 12,
-    paddingTop: 40,
+    padding: 16,
+    paddingTop: 60,
   },
   cardTitle: {
     color: '#fff',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 2,
+    marginBottom: 4,
+  },
+  cardMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
   cardSubtitle: {
-    color: '#bbb',
+    color: '#aaa',
     fontSize: 12,
+    fontWeight: '600',
   }
 });

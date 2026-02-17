@@ -1,18 +1,66 @@
 import { useState, useEffect, useCallback } from 'react';
 // Force reload
-import { StyleSheet, TextInput, FlatList, TouchableOpacity, ActivityIndicator, View, Image, Text, Keyboard } from 'react-native';
+import { StyleSheet, TextInput, FlatList, TouchableOpacity, ActivityIndicator, View, Image, Text, Keyboard, Platform } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
 import { searchAnime } from '@/api/client';
 import { useRouter } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import Animated, {
+    FadeInUp,
+    FadeInDown,
+    useSharedValue,
+    useAnimatedStyle,
+    withRepeat,
+    withTiming,
+    interpolate,
+    Easing,
+    Layout
+} from 'react-native-reanimated';
 
 export default function SearchScreen() {
     const [query, setQuery] = useState('');
     const [debouncedQuery, setDebouncedQuery] = useState('');
+    const [isFocused, setIsFocused] = useState(false);
     const router = useRouter();
     const insets = useSafeAreaInsets();
+
+    // Breathing Animation for Icon
+    const breathe = useSharedValue(0);
+    // Focus Glow Animation
+    const focusValue = useSharedValue(0);
+
+    useEffect(() => {
+        breathe.value = withRepeat(
+            withTiming(1, { duration: 2500, easing: Easing.inOut(Easing.quad) }),
+            -1,
+            true
+        );
+    }, []);
+
+    useEffect(() => {
+        focusValue.value = withTiming(isFocused ? 1 : 0, { duration: 300 });
+    }, [isFocused]);
+
+    const iconStyle = useAnimatedStyle(() => ({
+        opacity: interpolate(breathe.value, [0, 1], [0.4, 0.8]),
+        transform: [{ scale: interpolate(breathe.value, [0, 1], [1, 1.1]) }]
+    }));
+
+    const searchBoxStyle = useAnimatedStyle(() => ({
+        borderColor: interpolate(focusValue.value, [0, 1], [
+            'rgba(255,255,255,0.05)' as any,
+            'rgba(108, 99, 255, 0.5)' as any
+        ]),
+        borderWidth: 1.5,
+        shadowOpacity: interpolate(focusValue.value, [0, 1], [0, 0.3]),
+        backgroundColor: interpolate(focusValue.value, [0, 1], [
+            'rgba(30, 30, 30, 0.8)' as any,
+            'rgba(35, 35, 35, 0.95)' as any
+        ]),
+    }));
 
     // Debounce the query update
     useEffect(() => {
@@ -34,18 +82,24 @@ export default function SearchScreen() {
         Keyboard.dismiss();
     };
 
-    const renderSuggestion = ({ item }) => (
-        <TouchableOpacity
-            style={styles.suggestionItem}
-            onPress={() => router.push({ pathname: '/details', params: { anime: JSON.stringify(item) } })}
+    const renderSuggestion = ({ item, index }: { item: any, index: number }) => (
+        <Animated.View
+            entering={FadeInUp.delay(index * 50).duration(600).easing(Easing.out(Easing.cubic))}
+            layout={Layout.springify()}
         >
-            <Image source={{ uri: item.images?.jpg?.small_image_url }} style={styles.suggestionImage} />
-            <View style={styles.suggestionInfo}>
-                <Text style={styles.suggestionTitle} numberOfLines={1}>{item.title}</Text>
-                <Text style={styles.suggestionMeta}>{item.year || 'Unknown'} • {item.type}</Text>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color="#666" />
-        </TouchableOpacity>
+            <TouchableOpacity
+                style={styles.suggestionItem}
+                activeOpacity={0.7}
+                onPress={() => router.push({ pathname: '/details', params: { anime: JSON.stringify(item) } })}
+            >
+                <Image source={{ uri: item.images?.jpg?.small_image_url }} style={styles.suggestionImage} />
+                <View style={styles.suggestionInfo}>
+                    <Text style={styles.suggestionTitle} numberOfLines={1}>{item.title}</Text>
+                    <Text style={styles.suggestionMeta}>{item.year || 'N/A'} • {item.type || 'TV'}</Text>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color="#444" />
+            </TouchableOpacity>
+        </Animated.View>
     );
 
     const renderGridItem = ({ item }) => (
@@ -67,14 +121,18 @@ export default function SearchScreen() {
                 <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
                     <Ionicons name="arrow-back" size={24} color="#fff" />
                 </TouchableOpacity>
-                <View style={styles.searchBox}>
-                    <Ionicons name="search" size={20} color="#888" style={{ marginRight: 8 }} />
+                <Animated.View style={[styles.searchBox, searchBoxStyle]}>
+                    <Animated.View style={iconStyle}>
+                        <Ionicons name="search" size={20} color={Colors.dark.primary} style={{ marginRight: 8 }} />
+                    </Animated.View>
                     <TextInput
                         style={styles.input}
-                        placeholder="Search anime..."
+                        placeholder="Search for anime..."
                         placeholderTextColor="#666"
                         value={query}
                         onChangeText={setQuery}
+                        onFocus={() => setIsFocused(true)}
+                        onBlur={() => setIsFocused(false)}
                         onSubmitEditing={handleSearchCheck}
                         returnKeyType="search"
                         autoFocus
@@ -84,7 +142,7 @@ export default function SearchScreen() {
                             <Ionicons name="close-circle" size={20} color="#888" />
                         </TouchableOpacity>
                     )}
-                </View>
+                </Animated.View>
             </View>
 
             {/* Content Area */}
@@ -107,8 +165,14 @@ export default function SearchScreen() {
                         />
                     ) : (
                         <View style={styles.emptyState}>
-                            <Ionicons name="search-outline" size={64} color="#333" />
-                            <Text style={styles.emptyText}>Type to find anime...</Text>
+                            <LinearGradient
+                                colors={['rgba(108, 99, 255, 0.2)', 'transparent']}
+                                style={styles.emptyGradient}
+                            >
+                                <Ionicons name="search-outline" size={80} color="rgba(108, 99, 255, 0.4)" />
+                            </LinearGradient>
+                            <Text style={styles.emptyTitle}>Find Your Next Show</Text>
+                            <Text style={styles.emptyText}>Start typing to explore thousands of anime titles across all genres.</Text>
                         </View>
                     )}
                 </View>
@@ -135,10 +199,13 @@ const styles = StyleSheet.create({
         flex: 1,
         flexDirection: 'row',
         alignItems: 'center',
-        backgroundColor: '#1E1E1E',
-        borderRadius: 12,
-        paddingHorizontal: 12,
-        height: 48,
+        borderRadius: 16,
+        paddingHorizontal: 16,
+        height: 52,
+        shadowColor: Colors.dark.primary,
+        shadowOffset: { width: 0, height: 4 },
+        shadowRadius: 10,
+        elevation: 5,
     },
     input: {
         flex: 1,
@@ -166,16 +233,18 @@ const styles = StyleSheet.create({
     suggestionItem: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 10,
-        borderBottomWidth: 1,
-        borderBottomColor: '#222',
-        marginBottom: 8,
+        padding: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: 16,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+        marginBottom: 12,
     },
     suggestionImage: {
-        width: 48,
-        height: 48,
-        borderRadius: 8,
-        marginRight: 12,
+        width: 56,
+        height: 56,
+        borderRadius: 12,
+        marginRight: 16,
         backgroundColor: '#222',
     },
     suggestionInfo: {
@@ -185,23 +254,39 @@ const styles = StyleSheet.create({
     suggestionTitle: {
         color: '#fff',
         fontSize: 16,
-        fontWeight: '500',
-        marginBottom: 2,
+        fontWeight: 'bold',
+        marginBottom: 4,
     },
     suggestionMeta: {
-        color: '#666',
+        color: '#888',
         fontSize: 13,
+        fontWeight: '500',
     },
     // Empty State
     emptyState: {
         flex: 1,
         justifyContent: 'center',
         alignItems: 'center',
-        opacity: 0.5,
+        paddingHorizontal: 40,
+    },
+    emptyGradient: {
+        width: 140,
+        height: 140,
+        borderRadius: 70,
+        justifyContent: 'center',
+        alignItems: 'center',
+        marginBottom: 24,
+    },
+    emptyTitle: {
+        color: '#fff',
+        fontSize: 20,
+        fontWeight: 'bold',
+        marginBottom: 8,
     },
     emptyText: {
-        color: '#666',
-        fontSize: 16,
-        marginTop: 16,
+        color: '#888',
+        fontSize: 15,
+        textAlign: 'center',
+        lineHeight: 22,
     },
 });
