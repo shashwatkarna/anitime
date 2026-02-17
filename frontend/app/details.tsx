@@ -110,13 +110,18 @@ export default function DetailsScreen() {
                                 </View>
 
                                 <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>
+                                        {mode === 'daily_eps' ? "How many episodes daily?" :
+                                            mode === 'daily_time' ? "How many minutes daily?" :
+                                                "When do you want to finish?"}
+                                    </Text>
                                     {mode !== 'target' ? (
                                         <TextInput
                                             style={styles.input}
                                             keyboardType="numeric"
                                             value={inputVal}
                                             onChangeText={setInputVal}
-                                            placeholder={mode === 'daily_eps' ? "e.g. 3 episodes" : "e.g. 45 minutes"}
+                                            placeholder={mode === 'daily_eps' ? "e.g. 3" : "e.g. 45"}
                                             placeholderTextColor="#666"
                                         />
                                     ) : (
@@ -137,11 +142,10 @@ export default function DetailsScreen() {
 
                                 {result && (
                                     <Animated.View entering={FadeInDown} style={styles.resultBox}>
-                                        <Text style={styles.resultLabel}>Target Finish Date</Text>
-                                        <Text style={styles.resultDate}>{result.finish_date}</Text>
+                                        <Text style={styles.resultLabel}>Estimated Time</Text>
+                                        <Text style={styles.resultDays}>{result.days_required} Days</Text>
+                                        <Text style={styles.resultDateSmall}>Finish by: {result.finish_date.split('-').reverse().join('-')}</Text>
                                         <View style={styles.resultStats}>
-                                            <Text style={styles.statText}>{result.days_required} Days</Text>
-                                            <Text style={styles.statText}>•</Text>
                                             <Text style={styles.statText}>{result.total_hours} Hours Total</Text>
                                         </View>
                                     </Animated.View>
@@ -237,13 +241,18 @@ export default function DetailsScreen() {
                                 </View>
 
                                 <View style={styles.inputContainer}>
+                                    <Text style={styles.inputLabel}>
+                                        {mode === 'daily_eps' ? "How many episodes daily?" :
+                                            mode === 'daily_time' ? "How many minutes daily?" :
+                                                "When do you want to finish?"}
+                                    </Text>
                                     {mode !== 'target' ? (
                                         <TextInput
                                             style={styles.input}
                                             keyboardType="numeric"
                                             value={inputVal}
                                             onChangeText={setInputVal}
-                                            placeholder={mode === 'daily_eps' ? "e.g. 3 episodes" : "e.g. 45 minutes"}
+                                            placeholder={mode === 'daily_eps' ? "e.g. 3" : "e.g. 45"}
                                             placeholderTextColor="#666"
                                         />
                                     ) : (
@@ -264,11 +273,10 @@ export default function DetailsScreen() {
 
                                 {result && (
                                     <Animated.View entering={FadeInDown} style={styles.resultBox}>
-                                        <Text style={styles.resultLabel}>Target Finish Date</Text>
-                                        <Text style={styles.resultDate}>{result.finish_date}</Text>
+                                        <Text style={styles.resultLabel}>Estimated Time</Text>
+                                        <Text style={styles.resultDays}>{result.days_required} Days</Text>
+                                        <Text style={styles.resultDateSmall}>Finish by: {result.finish_date.split('-').reverse().join('-')}</Text>
                                         <View style={styles.resultStats}>
-                                            <Text style={styles.statText}>{result.days_required} Days</Text>
-                                            <Text style={styles.statText}>•</Text>
                                             <Text style={styles.statText}>{result.total_hours} Hours Total</Text>
                                         </View>
                                     </Animated.View>
@@ -479,6 +487,7 @@ const styles = StyleSheet.create({
     modeText: { color: '#888', fontWeight: 'bold', fontSize: 12 },
     activeModeText: { color: '#fff' },
     inputContainer: { marginBottom: 20 },
+    inputLabel: { color: '#bbb', marginBottom: 10, fontSize: 14, fontWeight: '600' },
     input: {
         backgroundColor: '#222',
         color: '#fff',
@@ -519,8 +528,9 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(108, 99, 255, 0.2)',
     },
-    resultLabel: { color: Colors.dark.primary, fontSize: 14, fontWeight: '600', marginBottom: 4 },
-    resultDate: { fontSize: 28, fontWeight: 'bold', color: '#fff', marginBottom: 8 },
-    resultStats: { flexDirection: 'row', gap: 10 },
-    statText: { color: '#aaa', fontSize: 14 },
+    resultLabel: { color: Colors.dark.primary, fontSize: 13, fontWeight: 'bold', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 4 },
+    resultDays: { fontSize: 42, fontWeight: 'bold', color: '#fff', marginBottom: 4, textShadowColor: 'rgba(108, 99, 255, 0.5)', textShadowRadius: 10 },
+    resultDateSmall: { fontSize: 16, color: '#ddd', fontWeight: '600', marginBottom: 10 },
+    resultStats: { flexDirection: 'row', gap: 10, marginTop: 5, paddingTop: 10, borderTopWidth: 1, borderTopColor: 'rgba(255,255,255,0.1)' },
+    statText: { color: '#888', fontSize: 13 },
 });
