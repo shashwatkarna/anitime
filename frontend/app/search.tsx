@@ -16,6 +16,7 @@ import Animated, {
     withRepeat,
     withTiming,
     interpolate,
+    interpolateColor,
     Easing,
     Layout
 } from 'react-native-reanimated';
@@ -50,15 +51,15 @@ export default function SearchScreen() {
     }));
 
     const searchBoxStyle = useAnimatedStyle(() => ({
-        borderColor: interpolate(focusValue.value, [0, 1], [
-            'rgba(255,255,255,0.05)' as any,
-            'rgba(108, 99, 255, 0.5)' as any
+        borderColor: interpolateColor(focusValue.value, [0, 1], [
+            'rgba(255,255,255,0.05)',
+            'rgba(108, 99, 255, 0.5)'
         ]),
         borderWidth: 1.5,
         shadowOpacity: interpolate(focusValue.value, [0, 1], [0, 0.3]),
-        backgroundColor: interpolate(focusValue.value, [0, 1], [
-            'rgba(30, 30, 30, 0.8)' as any,
-            'rgba(35, 35, 35, 0.95)' as any
+        backgroundColor: interpolateColor(focusValue.value, [0, 1], [
+            'rgba(30, 30, 30, 0.8)',
+            'rgba(35, 35, 35, 0.95)'
         ]),
     }));
 
@@ -102,7 +103,7 @@ export default function SearchScreen() {
         </Animated.View>
     );
 
-    const renderGridItem = ({ item }) => (
+    const renderGridItem = ({ item }: { item: any }) => (
         <TouchableOpacity
             style={styles.gridCard}
             onPress={() => router.push({ pathname: '/details', params: { anime: JSON.stringify(item) } })}
@@ -288,5 +289,25 @@ const styles = StyleSheet.create({
         fontSize: 15,
         textAlign: 'center',
         lineHeight: 22,
+    },
+    // Grid Styles (fallback)
+    gridCard: {
+        backgroundColor: '#1E1E1E',
+        borderRadius: 12,
+        overflow: 'hidden',
+        marginBottom: 16,
+    },
+    gridImage: {
+        width: '100%',
+        height: 150,
+        resizeMode: 'cover',
+    },
+    gridContent: {
+        padding: 12,
+    },
+    gridTitle: {
+        color: '#fff',
+        fontSize: 14,
+        fontWeight: 'bold',
     },
 });
